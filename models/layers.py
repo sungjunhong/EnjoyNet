@@ -44,3 +44,8 @@ def fully_connected(inputs, num_outputs, **kwargs):
 def flatten(inputs, **kwargs):
     dims = int(np.prod(inputs.get_shape()[1:]))
     return tf.reshape(inputs, [-1, dims])
+
+
+def global_avg_pool(inputs, **kwargs):
+    assert inputs.get_shape().ndims == 4
+    return tf.reduce_mean(inputs, [1, 2])
