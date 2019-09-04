@@ -13,13 +13,16 @@ def bias_variable(shape, bias_initializer):
 
 
 def conv2d(inputs, output_channels, kernel_size, stride=1, padding='SAME', **kwargs):
-    weight_initializer = kwargs.pop('weight_initializer', tf.random_normal_initializer(mean=0.0, stddev=.01))
-    bias_initializer = kwargs.pop('bias_initializer', tf.constant_initializer(value=1.0))
+    weight_initializer = kwargs.pop('weight_initializer', tf.random_normal_initializer(mean=0.0, stddev=0.01))
+    bias_initializer = kwargs.pop('bias_initializer', tf.constant_initializer(value=0.1))
     in_channels = int(inputs.get_shape()[-1])
     filter = weight_variable(shape=[kernel_size, kernel_size, in_channels, output_channels],
                              weight_initializer=weight_initializer)
-    bias = bias_variable(shape=[output_channels], bias_initializer=bias_initializer)
-    return tf.nn.conv2d(input=inputs, filter=filter, strides=[1, stride, stride, 1], padding=padding) + bias
+    if bias_initializer is not None:
+        bias = bias_variable(shape=[output_channels], bias_initializer=bias_initializer)
+        return tf.nn.conv2d(input=inputs, filter=filter, strides=[1, stride, stride, 1], padding=padding) + bias
+    else:
+        return tf.nn.conv2d(input=inputs, filter=filter, strides=[1, stride, stride, 1], padding=padding)
 
 
 def lrn(inputs, depth_radius=5, bias=2, alpha=1e-4, beta=0.75):
