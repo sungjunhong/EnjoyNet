@@ -12,10 +12,12 @@ class Optimizer(object):
         self.validation_set = validation_set
         self.evaluator = evaluator
 
+        self.input_shape = model.net['input'].get_shape()[1]
         self.batch_size = kwargs.pop('batch_size', 256)
         self.num_epochs = kwargs.pop('num_epochs', 1000)
         self.initial_learning_rate = kwargs.pop('initial_learning_rate', 0.01)
 
+        # self.global_step = tf.train.get_or_create_global_step()
         self.learning_rate = tf.placeholder(dtype=tf.float32)
         self.optimize_op = self._optimize_op()
 
@@ -35,7 +37,7 @@ class Optimizer(object):
     def _step(self, sess, **kwargs):
         augment = kwargs.pop('augment_train', True)
 
-        batch_xs, batch_ys = self.train_set.next_batch(self.batch_size, shuffle=True, augment=augment, is_training=True)
+        batch_xs, batch_ys = self.train_set.next_batch(self.batch_size, input_shape=self.input_shape, shuffle=True, augment=augment, is_training=True)
         y_true = batch_ys
         _, loss, y_pred = sess.run([self.optimize_op, self.model.loss, self.model.pred],
                                    feed_dict={self.model.X: batch_xs,

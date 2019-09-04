@@ -43,7 +43,7 @@ class DataSet(object):
     def epochs_completed(self):
         return self._epochs_completed
 
-    def next_batch(self, batch_size, shuffle=True, augment=True, is_training=True):
+    def next_batch(self, batch_size, input_shape, shuffle=True, augment=True, is_training=True):
         start = self._index_in_epoch
 
         if self._epochs_completed == 0 and start == 0 and shuffle:
@@ -79,7 +79,7 @@ class DataSet(object):
             batch_images = self._images[start:end]
             batch_labels = self._labels[start:end]
 
-        batch_images = center_crop(batch_images, 227)
+        batch_images = center_crop(batch_images, input_shape)
 
         # TODO: data augmentation routines
 

@@ -26,6 +26,7 @@ class ConvNet(object):
         pass
 
     def predict(self, sess, dataset, **kwargs):
+        input_shape = self.net['input'].get_shape()[1]
         batch_size = kwargs.pop('batch_size', 256)
 
         assert dataset.num_examples > 0, 'Data size should be over 0.'
@@ -38,7 +39,7 @@ class ConvNet(object):
                 _batch_size = dataset.num_examples - steps * batch_size
             else:
                 _batch_size = batch_size
-            _batch_xs, _ = dataset.next_batch(_batch_size, shuffle=False, is_training=False)
+            _batch_xs, _ = dataset.next_batch(_batch_size, input_shape=input_shape, shuffle=False, is_training=False)
             _y_pred = sess.run(self.pred,
                                feed_dict={self.X: _batch_xs, self.is_training: False})
             print('Predicting data: {}/{}'.format(step * batch_size + _batch_size, dataset.num_examples), end='\r')
