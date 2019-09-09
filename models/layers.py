@@ -52,3 +52,10 @@ def flatten(inputs, **kwargs):
 def global_avg_pool(inputs, **kwargs):
     assert inputs.get_shape().ndims == 4
     return tf.reduce_mean(inputs, [1, 2])
+
+
+# TODO: batch_norm() implimentation using low-level API
+def batch_norm(inputs, is_training, **kwargs):
+    return tf.layers.batch_normalization(inputs, training=is_training, momentum=0.99, epsilon=0.001,
+                                         center=True, scale=True)
+
