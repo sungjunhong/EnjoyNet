@@ -5,8 +5,8 @@ This repository contains a number of different models implemented in [TensorFlow
 
 ### Image Classification
 - [x] AlexNet
+- [x] DarkNet-19
 <!--
-- [ ] DarkNet-19
 
 ### Object Detection
 - [ ] YOLOv2

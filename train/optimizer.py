@@ -144,6 +144,7 @@ class AdamOptimizer(Optimizer):
         return train_op
 
     def _update_learning_rate(self, **kwargs):
+        # TODO: polynomial rate decay implementation.
         learning_rate_patience = kwargs.pop('learning_rate_patience', 10)
         learning_rate_decay = kwargs.pop('learning_rate_decay', 0.1)
         eps = kwargs.pop('learning_rate_eps', 1e-8)
