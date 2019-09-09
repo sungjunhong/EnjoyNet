@@ -37,13 +37,15 @@ class Optimizer(object):
     def _step(self, sess, **kwargs):
         augment = kwargs.pop('augment_train', True)
 
-        batch_xs, batch_ys = self.train_set.next_batch(self.batch_size, input_shape=self.input_shape, shuffle=True, augment=augment, is_training=True)
+        batch_xs, batch_ys = self.train_set.next_batch(self.batch_size, input_shape=self.input_shape,
+                                                       shuffle=True, augment=augment, is_training=True)
         y_true = batch_ys
-        _, loss, y_pred = sess.run([self.optimize_op, self.model.loss, self.model.pred],
-                                   feed_dict={self.model.X: batch_xs,
-                                              self.model.Y: batch_ys,
-                                              self.model.is_training: True,
-                                              self.learning_rate: self.curr_learning_rate})
+        _, loss, y_pred, y_logit = sess.run([self.optimize_op, self.model.loss, self.model.pred, self.model.logits],
+                                            feed_dict={self.model.X: batch_xs,
+                                                       self.model.Y: batch_ys,
+                                                       self.model.is_training: True,
+                                                       self.learning_rate: self.curr_learning_rate})
+        # print(y_logit[0], y_pred[0])
         return loss, y_true, y_pred
 
     def train(self, sess, **kwargs):
@@ -130,3 +132,24 @@ class MomentumOptimizer(Optimizer):
             self.num_idiot_epochs = 0
 
 
+class AdamOptimizer(Optimizer):
+
+    def _optimize_op(self, **kwargs):
+        momentum = kwargs.pop('momentum', 0.9)
+        extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        var_list = tf.trainable_variables()
+        with tf.control_dependencies(extra_update_ops):
+            train_op = tf.train.AdamOptimizer(self.learning_rate, momentum).minimize(
+                self.model.loss, var_list=var_list)
+        return train_op
+
+    def _update_learning_rate(self, **kwargs):
+        learning_rate_patience = kwargs.pop('learning_rate_patience', 10)
+        learning_rate_decay = kwargs.pop('learning_rate_decay', 0.1)
+        eps = kwargs.pop('learning_rate_eps', 1e-8)
+
+        if self.num_idiot_epochs > learning_rate_patience:
+            new_learning_rate = self.curr_learning_rate * learning_rate_decay
+            if self.curr_learning_rate - new_learning_rate > eps:
+                self.curr_learning_rate = new_learning_rate
+            self.num_idiot_epochs = 0
