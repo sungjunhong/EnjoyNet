@@ -53,7 +53,7 @@ else:
 graph = tf.get_default_graph()
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
-sess = tf.Session()
+sess = tf.Session(graph=graph, config=config)
 
 model = AlexNet([227, 227, 3], 2, **hp_d)
 evaluator = AccuracyEvaluator()
