@@ -41,9 +41,9 @@ if dataset.validation is None:
     print('Validation set is none.')
 else:
     print('Validation set stats:')
-    print('\tshape={}'.format(dataset.validation.images.shape))
-    print('\tmin={}, max={}'.format(dataset.validation.images.min(), dataset.validation.images.max()))
-    print('\tcat={}, dog={}'.format((dataset.validation.labels[:, 1] == 0).sum(),
+    print('shape={}'.format(dataset.validation.images.shape))
+    print('min={}, max={}'.format(dataset.validation.images.min(), dataset.validation.images.max()))
+    print('cat={}, dog={}'.format((dataset.validation.labels[:, 1] == 0).sum(),
                                     (dataset.validation.labels[:, 1] == 1).sum()))
 
 graph = tf.get_default_graph()
