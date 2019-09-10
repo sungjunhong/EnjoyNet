@@ -25,7 +25,7 @@ class ConvNet(object):
     def _build_loss(self, **kwargs):
         pass
 
-    def predict(self, sess, dataset, **kwargs):
+    def predict(self, sess, dataset, verbose=False, **kwargs):
         input_shape = self.net['input'].get_shape()[1]
         batch_size = kwargs.pop('batch_size', 256)
 
@@ -42,9 +42,11 @@ class ConvNet(object):
             _batch_xs, _ = dataset.next_batch(_batch_size, input_shape=input_shape, shuffle=False, is_training=False)
             _y_pred = sess.run(self.pred,
                                feed_dict={self.X: _batch_xs, self.is_training: False})
-            print('Predicting data: {}/{}'.format(step * batch_size + _batch_size, dataset.num_examples), end='\r')
+            if verbose:
+                print('Predicting data: {}/{}'.format(step * batch_size + _batch_size, dataset.num_examples), end='\r')
             y_pred.append(_y_pred)
-        print('\nPrediction time(s): {:.3f}'.format(time.time() - start_time))
+        if verbose:
+            print('\nPrediction time(s): {:.3f}'.format(time.time() - start_time))
         y_pred = np.concatenate(y_pred, axis=0)
 
         return y_pred

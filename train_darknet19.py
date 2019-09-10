@@ -58,4 +58,4 @@ optimizer = AdamOptimizer(model=model,
                           validation_set=dataset.validation,
                           evaluator=evaluator,
                           **hp_d)
-optimizer.train(sess, **hp_d)
+optimizer.train(sess, verbose=True, **hp_d)

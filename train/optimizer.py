@@ -17,11 +17,11 @@ class Optimizer(object):
         self.num_epochs = kwargs.pop('num_epochs', 1000)
         self.initial_learning_rate = kwargs.pop('initial_learning_rate', 0.01)
 
-        # self.global_step = tf.train.get_or_create_global_step()
+        self.global_step = tf.train.get_or_create_global_step()
         self.learning_rate = tf.placeholder(dtype=tf.float32)
         self.optimize_op = self._optimize_op()
 
-        self.curr_epoch = 1
+        self.curr_epoch = 0
         self.num_idiot_epochs = 0
         self.best_score = evaluator.worst_score
         self.curr_learning_rate = self.initial_learning_rate
@@ -45,69 +45,75 @@ class Optimizer(object):
                                                        self.model.Y: batch_ys,
                                                        self.model.is_training: True,
                                                        self.learning_rate: self.curr_learning_rate})
-        # print(y_logit[0], y_pred[0])
+        self.curr_epoch = self.train_set.epochs_completed
         return loss, y_true, y_pred
 
-    def train(self, sess, **kwargs):
+    def train(self, sess, verbose=False, **kwargs):
         save_dir = kwargs.pop('save_dir', './checkpoints')
 
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
 
-        num_examples = self.train_set.num_examples
-        num_steps_per_epoch = num_examples // self.batch_size
-        steps = self.num_epochs * num_steps_per_epoch
-
         step_losses = []
         step_train_scores = []
-        validation_scores = []
-
-        start_time = time.time()
-
-        for step in range(steps):
-
+        step_validation_scores = []
+        total_training_time = 0
+        epochs_completed = 0
+        while True:
+            tick = time.time()
             step_loss, step_y_true, step_y_pred = self._step(sess, **kwargs)
             step_losses.append(step_loss)
+            step_train_time = time.time() - tick
+            total_training_time += step_train_time
+            step_train_score = self.evaluator.score(step_y_true, step_y_pred)
+            step_train_scores.append(step_train_score)
 
-            if (step + 1) % num_steps_per_epoch == 0:
-                step_train_score = self.evaluator.score(step_y_true, step_y_pred)
-                step_train_scores.append(step_train_score)
+            step = sess.run(self.global_step)
+            num_images = step * self.batch_size
 
+            if self.curr_epoch > epochs_completed:
                 if self.validation_set is not None:
                     validation_y_true = self.validation_set.labels
                     validation_y_pred = self.model.predict(sess, self.validation_set, **kwargs)
                     validation_score = self.evaluator.score(validation_y_true, validation_y_pred)
-                    validation_scores.append(validation_score)
+                    step_validation_scores.append(validation_score)
                     curr_score = validation_score
-                    print('[epoch {}] loss: {:.6f} |train_score: {:.4f} |validation_score: {:.4f} |lr: {}' \
-                          .format(self.curr_epoch, step_loss, step_train_score, validation_score,
-                                  self.curr_learning_rate))
+                    print('{} epoch, {} step, {:.6f}, {:.6f} avg, {:.4f} avg, {:.6f} rate, {:.6f} secs, {} images' \
+                          .format(self.curr_epoch, step, step_loss, step_train_score, validation_score,
+                                  self.curr_learning_rate, step_train_time, num_images))
                 else:
                     curr_score = step_train_score
-                    print('[epoch {}] loss: {:.4f} |train_score: {:.4f} |lr: {}' \
-                          .format(self.curr_epoch, step_loss, step_train_score,
-                                  self.curr_learning_rate))
+                    print('{} epoch, {} step, {:.6f}, {:.6f} avg, {:.6f} rate, {:.6f} secs, {} images' \
+                          .format(self.curr_epoch, step, step_loss, step_train_score,
+                                  self.curr_learning_rate, step_train_time, num_images))
 
                 if self.evaluator.is_better(curr=curr_score, best=self.best_score, **kwargs):
                     self.best_score = curr_score
                     self.num_idiot_epochs = 0
-                    saver.save(sess, os.path.join(save_dir, 'model'))
+                    saver.save(sess, os.path.join(save_dir, 'model'), global_step=self.global_step)
+                    if verbose:
+                        print('The best model was updated and saved. {:.6f} avg.'.format(self.best_score))
                 else:
                     self.num_idiot_epochs += 1
 
+                if not self.curr_epoch < self.num_epochs:
+                    break
                 self._update_learning_rate(**kwargs)
-                self.curr_epoch += 1
 
-        print('Total training time(s): {:.3f}'.format(time.time() - start_time))
-        print('Best {} score: {:.3f}'.format('evaluation' if self.validation_set is not None else 'training',
-                                             self.best_score))
-        print('Done.')
+            epochs_completed = self.curr_epoch
+
+        if verbose:
+            print('Total training time(s): {:.3f}'.format(total_training_time))
+            print('Total epochs/steps: {}/{}'.format(epochs_completed, step))
+            print('Best {} score: {:.3f}'.format('evaluation' if self.validation_set is not None else 'training',
+                                                 self.best_score))
+            print('Done.')
 
         rst = dict()
         rst['step_losses'] = step_losses
         rst['step_train_scores'] = step_train_scores
         if self.validation_set is not None:
-            rst['validation_scores'] = validation_scores
+            rst['validation_scores'] = step_validation_scores
 
         return rst
 
@@ -140,7 +146,7 @@ class AdamOptimizer(Optimizer):
         var_list = tf.trainable_variables()
         with tf.control_dependencies(extra_update_ops):
             train_op = tf.train.AdamOptimizer(self.learning_rate, momentum).minimize(
-                self.model.loss, var_list=var_list)
+                self.model.loss, global_step=self.global_step, var_list=var_list)
         return train_op
 
     def _update_learning_rate(self, **kwargs):
