@@ -138,7 +138,7 @@ class MomentumOptimizer(Optimizer):
         momentum = kwargs.pop('momentum', 0.9)
         var_list = tf.trainable_variables()
         return tf.train.MomentumOptimizer(self.learning_rate, momentum=momentum, use_nesterov=False) \
-            .minimize(loss=self.model.loss, var_list=var_list)
+            .minimize(loss=self.model.loss, global_step=self.global_step, var_list=var_list)
 
     def _update_learning_rate(self, **kwargs):
         learning_rate_patience = kwargs.pop('learning_rate_patience', 10)
