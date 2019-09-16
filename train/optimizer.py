@@ -17,6 +17,9 @@ class Optimizer(object):
         self.num_epochs = kwargs.pop('num_epochs', 1000)
         self.initial_learning_rate = kwargs.pop('initial_learning_rate', 0.01)
 
+        self.burn_in_epochs = kwargs.pop('burn_in_epochs', 0)
+        self.burn_in_learning_rate = kwargs.pop('burn_in_learning_rate', self.initial_learning_rate)
+
         self.global_step = tf.train.get_or_create_global_step()
         self.learning_rate = tf.placeholder(dtype=tf.float32)
         self.optimize_op = self._optimize_op()
@@ -24,7 +27,10 @@ class Optimizer(object):
         self.curr_epoch = 0
         self.num_idiot_epochs = 0
         self.best_score = evaluator.worst_score
-        self.curr_learning_rate = self.initial_learning_rate
+        if self.burn_in_epochs > 0:
+            self.curr_learning_rate = self.burn_in_learning_rate
+        else:
+            self.curr_learning_rate = self.initial_learning_rate
 
     @abstractmethod
     def _optimize_op(self, **kwargs):
@@ -46,6 +52,10 @@ class Optimizer(object):
                                                        self.model.is_training: True,
                                                        self.learning_rate: self.curr_learning_rate})
         self.curr_epoch = self.train_set.epochs_completed
+        if 0 < self.burn_in_epochs < self.curr_epoch:
+            self.curr_learning_rate = self.initial_learning_rate
+            self.burn_in_epochs = 0
+
         return loss, y_true, y_pred
 
     def train(self, sess, verbose=False, **kwargs):
@@ -57,14 +67,16 @@ class Optimizer(object):
         step_losses = []
         step_train_scores = []
         step_validation_scores = []
-        total_training_time = 0
+        total_train_time = 0
+        epoch_train_time = 0
         epochs_completed = 0
         while True:
             tick = time.time()
             step_loss, step_y_true, step_y_pred = self._step(sess, **kwargs)
             step_losses.append(step_loss)
             step_train_time = time.time() - tick
-            total_training_time += step_train_time
+            epoch_train_time += step_train_time
+            total_train_time += step_train_time
             step_train_score = self.evaluator.score(step_y_true, step_y_pred)
             step_train_scores.append(step_train_score)
 
@@ -78,14 +90,14 @@ class Optimizer(object):
                     validation_score = self.evaluator.score(validation_y_true, validation_y_pred)
                     step_validation_scores.append(validation_score)
                     curr_score = validation_score
-                    print('{} epoch, {} step, {:.6f}, {:.6f} avg, {:.4f} avg, {:.6f} rate, {:.6f} secs, {} images' \
+                    print('{} epoch, {} step, {:.6f}, {:.6f} avg, {:.4f} avg, {:.6f} rate, {:.6f} secs, {} images, {} idiots' \
                           .format(self.curr_epoch, step, step_loss, step_train_score, validation_score,
-                                  self.curr_learning_rate, step_train_time, num_images))
+                                  self.curr_learning_rate, epoch_train_time, num_images, self.num_idiot_epochs))
                 else:
                     curr_score = step_train_score
                     print('{} epoch, {} step, {:.6f}, {:.6f} avg, {:.6f} rate, {:.6f} secs, {} images' \
                           .format(self.curr_epoch, step, step_loss, step_train_score,
-                                  self.curr_learning_rate, step_train_time, num_images))
+                                  self.curr_learning_rate, epoch_train_time, num_images))
 
                 if self.evaluator.is_better(curr=curr_score, best=self.best_score, **kwargs):
                     self.best_score = curr_score
@@ -96,14 +108,16 @@ class Optimizer(object):
                 else:
                     self.num_idiot_epochs += 1
 
-                if not self.curr_epoch < self.num_epochs:
+                epoch_train_time = 0
+                epochs_completed = self.curr_epoch
+                if not epochs_completed < self.num_epochs:
                     break
+
+            if not self.burn_in_epochs > 0:
                 self._update_learning_rate(**kwargs)
 
-            epochs_completed = self.curr_epoch
-
         if verbose:
-            print('Total training time(s): {:.3f}'.format(total_training_time))
+            print('Total training time(s): {:.3f}'.format(total_train_time))
             print('Total epochs/steps: {}/{}'.format(epochs_completed, step))
             print('Best {} score: {:.3f}'.format('evaluation' if self.validation_set is not None else 'training',
                                                  self.best_score))
