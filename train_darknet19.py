@@ -28,6 +28,10 @@ hp_d['learning_rate_patience'] = 30
 hp_d['learning_rate_decay'] = 0.1
 hp_d['learning_rate_eps'] = 1e-8
 
+# To update learning rate with burn-in, uncomment the lines below.
+# hp_d['burn_in_epochs'] = 10
+# hp_d['burn_in_learning_rate'] = 0.001
+
 hp_d['momentum'] = 0.9
 hp_d['weight_decay'] = 0.0005
 
