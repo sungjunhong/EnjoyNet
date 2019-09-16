@@ -12,6 +12,9 @@ This repository contains a number of different models implemented in [TensorFlow
 - [ ] YOLOv2
 -->
 
+### Other Features
+- [ ] Batch Normalization
+
 ### Dataset
 - The Asirra (Dogs vs. Cats) [[kaggle](https://www.kaggle.com/c/dogs-vs-cats)][[download](https://drive.google.com/file/d/1xA-9m2j75ZUecmB55ko61K3KTFjFvS1Q/view?usp=sharing)]
 
